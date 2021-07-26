@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+
+    <title>My first BootstrapVue app</title>
+
+    <!-- Required Stylesheets -->
+    <link
+      type="text/css"
+      rel="stylesheet"
+      href="https://unpkg.com/bootstrap/dist/css/bootstrap.min.css"
+    />
+    <link
+      type="text/css"
+      rel="stylesheet"
+      href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.css"
+    />
+
+    <!-- Load polyfills to support older browsers -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es2015%2CIntersectionObserver"></script>
+
+    <!-- Required scripts -->
+    <script src="https://unpkg.com/vue@latest/dist/vue.js"></script>
+    <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.js"></script>
+    <script src="//unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue-icons.min.js"></script>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <!--bootstrap icon cdn-->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+  </head>
+  <body>
+    <!-- Our application root element -->
+    <div id="app" :class="{'bg-dark': color_dark}" style="padding: 15px;">
+      <b-container>
+        <!-- light mode -->
+        <b-row  v-if="!color_dark" align-content="center" style="margin-top: 20px; margin-bottom: 20px;">
+          <!-- button change people -->
+          <b-col cols="1">
+            <b-button variant="outline-primary" @click="get_new_users">
+              換一批
+            </b-button>
+          </b-col>
+          <!-- button change img type -->
+          <b-col>
+            <b-button variant="outline-success"
+                      @click="pictureCurrent_index = (pictureCurrent_index+1)%3">
+              切換大頭貼清晰度
+            </b-button>
+          </b-col>
+          <!-- text show current img type -->
+          <b-col align-self="center">
+            目前的清晰度 : {{ picture_type[pictureCurrent_index] }}
+          </b-col>
+          <!-- nothing -->
+          <b-col cols="5"></b-col>
+          <!-- form select change row,col -->
+          <b-col cols="1">
+            <b-form-select v-model="selected"
+                          :options="options"
+                          @change="changeRowCol"
+                          style="margin-top: 5px;
+                                background-color: lightblue;
+                                color: darkslategrey;"></b-form-select>
+          </b-col>
+          <!-- button change light/dark mode -->
+          <!-- <b-col cols="1">
+            <b-button variant="light" v-if="color_dark">
+              <b-icon icon="brightness-high"></b-icon>
+            </b-button>
+            <b-button variant="light" @click="color_dark = !color_dark">
+              <b-icon icon="brightness-high-fill"></b-icon>
+            </b-button>
+          </b-col> -->
+        </b-row>
+
+        <!-- dark mode -->
+        <!-- <b-row v-else align-content="center" style="margin-top: 20px; margin-bottom: 20px;"> -->
+          <!-- button change people -->
+          <!-- <b-col cols="1">
+            <b-button variant="primary" @click="get_new_users">
+              換一批
+            </b-button>
+          </b-col> -->
+          <!-- button change img type -->
+          <!-- <b-col>
+            <b-button variant="success"
+                      @click="pictureCurrent_index = (pictureCurrent_index+1)%3">
+              切換大頭貼清晰度
+            </b-button>
+          </b-col> -->
+          <!-- text show current img type -->
+          <!-- <b-col align-self="center" style="color: white;">
+            目前的清晰度 : {{ picture_type[pictureCurrent_index] }}
+          </b-col> -->
+          <!-- nothing -->
+          <!-- <b-col cols="4"></b-col> -->
+          <!-- form select change row,col -->
+          <!-- <b-col cols="1">
+            <b-form-select v-model="selected"
+                          :options="options"
+                          @change="changeRowCol"
+                          style="margin-top: 5px;
+                                background-color: darkgoldenrod;
+                                color: white;"></b-form-select>
+          </b-col> -->
+          <!-- button change light/dark mode -->
+          <!-- <b-col cols="1">
+            <b-button variant="light" @click="color_dark = !color_dark">
+              <b-icon icon="brightness-high"></b-icon>
+            </b-button>
+          </b-col>
+        </b-row> -->
+
+        <b-row v-for="index1 in rows" :key="index1*rows">
+          <b-col :cols="12/cols"
+                v-for="(index2,C_index) in cols"
+                :key="index2*cols"
+                v-if="users.length > (C_index = computedIndex(index1,index2))">
+            <b-card style="background-color: #fff5d9;
+                          border-radius: 50pt;
+                          border-color: burlywood;
+                          text-align: center;
+                          margin-bottom: 10px;">
+              <!-- picture -->
+              <b-img rounded="circle"
+                    :src="users[ C_index ].picture[ picture_dataType[pictureCurrent_index] ]"
+                    thumbnail
+                    style="margin-bottom: 8px; width: 100px;">
+              </b-img>
+              <!-- name & gender -->
+              <b-card-text>
+                <h4>
+                  {{ users[C_index].name['first'] }}
+                  {{ users[C_index].name['last'] }}
+                </h4>
+              </b-card-text>
+              <!-- gender -->
+              <b-card-text>
+                <h5>
+                  (
+                    <i v-if="users[C_index].gender === 'female'" class="bi bi-gender-female"></i>
+                    <i v-if="users[C_index].gender === 'male'" class="bi bi-gender-male"></i>
+                  )
+                </h5>
+              </b-card-text>
+              <!-- [e-mail / phone / cell / address] icon button -->
+              <b-card-text style="margin-bottom: 15px;">
+                <b-icon icon="envelope"
+                        font-scale=2
+                        variant="success"
+                        style="margin-right: 15px; cursor:pointer;"
+                        @click="showON(C_index, 'email')"></b-icon>
+                <b-icon icon="telephone"
+                        font-scale= 2
+                        variant="info"
+                        style="margin-right: 15px; cursor:pointer;"
+                        @click="showON(C_index, 'phone')"></b-icon>
+                <b-icon icon="phone-vibrate"
+                        font-scale= 2
+                        variant="warning"
+                        style="margin-right: 15px; cursor:pointer;"
+                        @click="showON(C_index, 'cell')"></b-icon>
+                <b-icon icon="geo-alt"
+                        font-scale= 2
+                        variant="danger"
+                        style="cursor:pointer;"
+                        @click="showON(C_index, 'address')"></b-icon>
+              </b-card-text>
+              <!-- email area -->
+              <b-card-text v-if="users[C_index].isActive ==='email'" style="margin-bottom: 5px;">
+                <p font-size="25px">
+                  {{ users[C_index].email }}
+                </p>
+              </b-card-text>
+              <!-- phone area -->
+              <b-card-text v-if="users[C_index].isActive ==='phone'" style="margin-bottom: 5px;">
+                <p font-size="25px">
+                  {{ users[C_index].phone }}
+                </p>
+              </b-card-text>
+              <!-- cell area -->
+              <b-card-text v-if="users[C_index].isActive ==='cell'" style="margin-bottom: 5px;">
+                <p font-size="25px">
+                  {{ users[C_index].cell }}
+                </p>
+              </b-card-text>
+              <!-- address area -->
+              <b-card-text v-if="users[C_index].isActive ==='address'" style="margin-bottom: 5px;">
+                <p font-size="25px">
+                  {{ users[C_index].location.city }}
+                  {{ users[C_index].location.state }}
+                  {{ users[C_index].location.country }}
+                  {{ users[C_index].location.postcode }}
+                </p>
+              </b-card-text>
+            </b-card>
+          </b-cols>
+        </b-row>
+
+        <!-- pagination -->
+        <div class="sticky-bottom" style="padding: 10px;">
+          <b-pagination v-model="currentPage"
+                        class="justify-content-center"
+                        per-page="1"
+                        :total-rows="pages"></b-pagination>
+        </div>
+    </div>
+
+    <!-- Start running your app -->
+    <script>
+      window.app = new Vue({
+        el: '#app',
+        data: {
+          color_dark: false,
+          max: 30,
+          min: 9,
+          name: '',
+          users: [],
+          selected: [3,4],
+          options: [
+            {value: [2,3], text: '2 x 3'},
+            {value: [2,4], text: '2 x 4'},
+            {value: [3,3], text: '3 x 3'},
+            {value: [3,4], text: '3 x 4'},
+            {value: [4,3], text: '4 x 3'},
+            {value: [4,4], text: '4 x 4'},
+          ],
+          rows: 0,
+          cols: 0,
+          pictureCurrent_index: 0,
+          picture_type: ["清晰","中等","模糊"],
+          picture_dataType: ['large','medium','thumbnail'],
+          currentPage: 1
+        },
+        methods: {
+          // get new user's data
+          get_new_users() {
+            let num = Math.floor(Math.random()*(this.max-this.min+1))+ this.min;
+            this.currentPage = 1;
+            axios.get('https://randomuser.me/api/?results='+num).then(
+            response =>{
+              // console.log(num);
+              response.data.results.forEach(element => {
+                element['isActive'] = '';
+              });
+              this.users = response.data.results;
+            });
+          },
+          // change row and col, show in a page
+          changeRowCol() {
+            // console.log(this.selected);
+            this.rows = this.selected[0];
+            this.cols = this.selected[1];
+            this.changePage();
+          },
+          // when user's [e-mail/phone/cell/address] icon is clicked
+          // show corresponding data
+          showON(index, type) {
+            // console.log('click index: ', index);
+            if( this.users[index].isActive == type )
+              this.users[index].isActive = '';
+            else{
+              this.users[index].isActive = type;
+            }
+          },
+          // compute index in this area
+          // to avoid computing same valy=ue
+          computedIndex(rowNum,colNum) {
+            // console.log('page: ',this.currentPage, ' ,index1: ',rowNum,' ,index2: ',colNum,' ,C_index: ',( (this.currentPage-1) * this.rows * this.cols + (rowNum - 1) * this.cols + (colNum-1) ) );
+            return ((this.currentPage-1) * this.rows * this.cols + (rowNum-1) * this.cols + (colNum-1));
+          },
+          // when change to other page [A], close page [A] all users' data area
+          changePage() {
+            let last = this.currentPage * this.rows * this.cols;
+            for(var i = (this.currentPage-1) * this.rows * this.cols; i < last; i++){
+              if(i < this.users.length)
+                this.users[i].isActive = '';
+            }
+          }
+        },
+        computed: {
+          // compute how many pages
+          pages() {
+            let num = Math.floor(this.users.length / (this.rows * this.cols));
+            let num_remainder = this.users.length % (this.rows * this.cols);
+            // console.log('num '+num);
+            // console.log(num_remainder);
+            return num_remainder!=0 ? num+1 : num;
+          }
+        },
+        mounted (){
+          this.get_new_users();
+          this.changeRowCol();
+        },
+        watch: {
+          currentPage: {
+            handler: function(newValue, oldValue){
+              // console.log(newValue, oldValue);
+              this.changePage();
+            }
+          }
+        }
+      })
+    </script>
+  </body>
+</html>
