@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>待辦筆記本</title>
+    <!-- Required Stylesheets -->
+    <link
+      type="text/css"
+      rel="stylesheet"
+      href="https://unpkg.com/bootstrap/dist/css/bootstrap.min.css"
+    />
+    <link
+      type="text/css"
+      rel="stylesheet"
+      href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.css"
+    />
+
+    <!-- Load polyfills to support older browsers -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es2015%2CIntersectionObserver"></script>
+
+    <!-- Required scripts -->
+    <script src="https://unpkg.com/vue@latest/dist/vue.js"></script>
+    <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.js"></script>
+    <script src="//unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue-icons.min.js"></script>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <!--bootstrap icon cdn-->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+</head>
+<body>
+    <div id="app">
+        <b-container style="margin-top: 18px;">
+          <!-- add new item -->
+          <b-row>
+            <b-col>
+              <h4 class="text-center" style="margin-top: 5px;">
+                <b-icon icon="list-task" scale="1.5"></b-icon>
+                待辦事項
+              </h4>
+            </b-col>
+            <b-col cols="9">
+              <b-form-input type="text" v-model="input_text"></b-form-input>
+            </b-col>
+            <b-col>
+                <b-button @click="addItem" variant="secondary">
+                  <b-icon icon="journal-plus" scale="1" variant="info"></b-icon>  
+                  Add
+                </b-button>
+            </b-col>
+          </b-row>
+
+          <!-- button group of [all | not finish | finish | delete] -->
+          <b-button-group>
+            <!-- all -->
+            <b-button style="background-color: #fce9c5; color: black;" @click="filter_type = '' ">
+              <b-icon icon="folder"></b-icon>
+              全部
+              <strong style="font-style: italic; color:black;">
+                [ {{ total_num }} ]
+              </strong>
+            </b-button>
+            <!-- not finish -->
+            <b-button style="background-color: wheat; color: black;" @click="filter_type = 'not finish' ">
+              <b-icon icon="files"></b-icon>
+              未完成
+              <strong style="font-style: italic; color: red;">
+                [ {{ not_finish_num }} ]
+              </strong>
+            </b-button>
+            <!-- finish -->
+            <b-button style="background-color: #f7d799; color: black;" @click="filter_type = 'finish' ">
+              <b-icon icon="check-square-fill" scale="1" variant="success"></b-icon>
+              完成
+              <strong style="font-style: italic; color:cadetblue;">
+                [ {{ finish_num }} ]
+              </strong>
+            </b-button>
+            <!-- clear -->
+            <b-button  style="background-color: #f5cd82; color: black;" v-b-modal.modal-1>
+              <b-icon icon="trash" scale="1" variant="danger"></b-icon>
+              清除
+            </b-button>
+          </b-button-group>
+          
+          <b-modal
+            id="modal-1"
+            title="Alert!!"
+            hide-header
+            body-text-variant="danger"
+            no-close-on-backdrop
+            no-close-on-esc
+            button-size="sm"
+            cancel-title="No"
+            ok-title="Yes"
+            @ok="deleteAll">
+            <strong style="font-size:x-large;">刪除目前頁面的所有項目?</strong>
+          </b-modal>
+
+          <!-- show all item -->
+          <div style="margin-top: 5px;">
+            <b-list-group>
+              <b-list-group-item
+                v-for="(item, index) in rows"
+                v-if="choose_item.length > (index = currentIndex(item))"
+                :key="choose_item[index].value">
+                <b-row>
+                  <b-col cols="11">
+                    <b-form-checkbox
+                      style="margin-top: 10px;"
+                      plain
+                      stacked
+                      :checked="choose_item[index].finish"
+                      @change="itemFinish(choose_item[index].value)">
+                      <p :style="{'text-decoration': T_decoration(choose_item[index].finish)}">
+                        {{ choose_item[index].text }}
+                      </p>
+                    </b-form-checkbox>
+                  </b-col>
+                  <b-col class="h4">
+                    <b-icon
+                      icon="x-circle"
+                      style="margin-top: 10px; cursor: pointer;"
+                      @click="deleteSingle(choose_item[index])"></b-icon>
+                  </b-col>
+                </b-row>
+              </b-list-group-item>
+            </b-list-group>           
+          </div>
+
+          <!-- pagination -->
+          <b-row style="margin-top: 10px;">
+            <b-col cols="9"></b-col>
+            <b-col>
+              <b-pagination
+                v-model="currentPage"
+                per-page="1"
+                :total-rows="pages"></b-pagination>
+            </b-col>
+          </b-row>
+        </b-container>
+    </div>
+    <script>
+        window.app = new Vue({
+          el: '#app',
+          data: {
+            current_id: 1,
+            input_text: '',
+            filter_type: '',
+            all_items: [],
+            searching: false,
+            rows: 7,
+            currentPage: 1
+          },
+          methods: {
+            // compute this area's index
+            currentIndex(item) {
+              return (this.currentPage-1) * this.rows + item - 1;
+            },
+            // add item to 變數 all_items
+            addItem() {
+              if(this.input_text == ''){
+                alert('Can\'t be empty');
+                return;
+              }
+              this.all_items.unshift({value: this.current_id, text: this.input_text, finish:false});
+              this.current_id++;
+              this.input_text = '';
+            },
+            // if item finished, finish:false=>true
+            itemFinish(value) {
+              for(var i = 0; i < this.all_items.length; i++){
+                if(this.all_items[i].value == value){
+                  this.all_items[i].finish = !this.all_items[i].finish;
+                  break;
+                }
+              }
+            },
+            // delete specific item
+            deleteSingle(item) {
+              for(var i = 0; i < this.all_items.length; i++){
+                console.log(this.all_items[i] == item);
+                if(this.all_items[i] == item){
+                  this.all_items.splice(i,1);
+                  break;
+                }
+              }
+            },
+            // clear 變數 all_items
+            deleteAll() {
+              switch (this.filter_type) {
+                case 'not finish':
+                  this.all_items = this.all_items.filter(item => item.finish != false);
+                  break;
+
+                case 'finish':
+                  this.all_items = this.all_items.filter( item => item.finish != true );
+                  break;
+
+                default:
+                  this.all_items = [];
+                  break;
+              }
+              console.log('ok delete');
+            },
+            // if item finish, it's text decoration change
+            T_decoration(type) {
+              if(type)
+                return 'line-through';
+              return 'none';
+            }
+          },
+          computed: {
+            // compute page
+            pages() {
+              let num = Math.floor(this.choose_item.length / this.rows);
+              return (this.choose_item.length % this.rows == 0) ? num : num+1;
+            },
+            // change showing data
+            choose_item() {
+              switch (this.filter_type) {
+                case 'not finish':
+                  return  this.all_items.filter( item => item.finish == false );
+
+                case 'finish':
+                  return this.all_items.filter( item => item.finish == true );
+
+                default:
+                  return this.all_items;
+              }
+            },
+            // compute all_items count
+            total_num() {
+              return this.all_items.length;
+            },
+            // compute finish count in all_items
+            finish_num() {
+              return this.all_items.filter( item => item.finish == true ).length;
+            },
+            // compute not finish count in all_items
+            not_finish_num() {
+              return this.all_items.filter( item => item.finish == false ).length;
+            }
+          },
+          mounted (){
+          },
+          watch: {
+          }
+        })
+      </script>
+</body>
+</html>
